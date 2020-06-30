@@ -38,12 +38,12 @@ def eg_builder(ark):
     #
     # Mint ark for evidence graph
     #
-    try:
-        eg_id = mint_eg_id(eg)
-        add_eg_to_og_id(ark,eg_id)
-    except:
-        logger.error('Minting evidence graph failed.',exc_info=True)
-        return eg
+    # try:
+    #     eg_id = mint_eg_id(eg)
+    #     add_eg_to_og_id(ark,eg_id)
+    # except:
+    #     logger.error('Minting evidence graph failed.',exc_info=True)
+    #     return eg
 
     return eg
 
