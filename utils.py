@@ -11,7 +11,7 @@ SD_USERNAME = os.environ.get('STARDOG_USERNAME')
 SD_PASSWORD = os.environ.get('STARDOG_PASSWORD')
 
 ORS_URL = os.environ.get("ORS_URL","ors.uvadco.io/")
-
+EVI_PREFIX = 'evi:'
 conn_details = {
         'endpoint': SD_URL,
         'username': SD_USERNAME,
@@ -35,7 +35,7 @@ def mint_eg_id(eg):
 def add_eg_to_og_id(ark,eg_id):
 
     r = requests.put(ORS_URL +  ark,
-                data=json.dumps({'eg:hasEvidenceGraph':eg_id}))
+                data=json.dumps({EVI_PREFIX + 'hasEvidenceGraph':eg_id}))
 
 def eg_exists(ark):
     '''
@@ -46,8 +46,8 @@ def eg_exists(ark):
 
     meta = r.json()
 
-    if 'eg:hasEvidenceGraph' in meta.keys():
-        return True, meta['eg:hasEvidenceGraph']
+    if EVI_PREFIX + 'hasEvidenceGraph' in meta.keys():
+        return True, meta[EVI_PREFIX + 'hasEvidenceGraph']
     elif 'error' in meta.keys():
         raise Exception
 
@@ -77,6 +77,8 @@ def is_id(string):
         return True
     if 'orchid:' in string:
         return True
+    if 'https://orcid.org/' in string:
+        return True
 
     return False
 
@@ -90,6 +92,7 @@ def parse_csv(df):
                'http://schema.org/_id':'@id',
               'http://schema.org/':'',
                'http://example.org/':'eg:',
+               'http://example.org/':'evi:',
                "https://wf4ever.github.io/ro/2016-01-28/wfdesc/":'wfdesc:'
               }
 
@@ -212,7 +215,7 @@ def clean_eg(eg,eg_only = True):
 
     for key in list(eg):
 
-        if 'eg' not in key and key != '@id' and key != 'author' and key != 'name' and key != '@type':
+        if 'evi' not in key and 'eg' not in key and key != '@id' and key != 'author' and key != 'name' and key != '@type':
             eg.pop(key, None)
             continue
 
@@ -246,5 +249,10 @@ def create_eg(ark):
     eg = parse_csv(df_eg)
     #eg = build_evidence_graph(df_eg)
     eg = clean_eg(eg)
+
+    eg["@context"] = {
+    "@vocab": "http://schema.org/",
+    "evi": "http://purl.org/evi/"
+    }
 
     return eg
