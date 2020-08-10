@@ -14,14 +14,16 @@ app.url_map.converters['everything'] = EverythingConverter
 def homepage():
     return 'working'
 
-@app.route('/eg/<everything:ark>')
+@app.route('/<everything:ark>')
 def eg_builder(ark):
 
     logger.info('Homepage handling request %s', request)
 
+    token = request.headers.get("Authorization")
+
     #Check to make sure request is for known ark
     try:
-        exists, eg_id = eg_exists(ark)
+        exists, eg_id = eg_exists(ark,token)
     except:
         logger.error('User gievn ark does not exist ' + str(ark))
         return jsonify({'error':'Given ark does not exist.'}),503

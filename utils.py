@@ -37,17 +37,20 @@ def add_eg_to_og_id(ark,eg_id):
     r = requests.put(ORS_URL +  ark,
                 data=json.dumps({EVI_PREFIX + 'hasEvidenceGraph':eg_id}))
 
-def eg_exists(ark):
+def eg_exists(ark,token):
     '''
     Pings ors to see if ark is reconginzed
     '''
 
-    r = requests.get(ORS_URL + ark)
+    r = requests.get(ORS_URL + ark,headers = {"Authorization": token})
 
     meta = r.json()
 
+
+
     if EVI_PREFIX + 'hasEvidenceGraph' in meta.keys():
         return True, meta[EVI_PREFIX + 'hasEvidenceGraph']
+
     elif 'error' in meta.keys():
         raise Exception
 
@@ -207,7 +210,7 @@ def build_evidence_graph(data,clean = True):
     return eg
 
 
-def clean_eg(eg,eg_only = True):
+def clean_eg(eg,eg_only = True,keep = []):
     '''
     Goes through json evidence graph removes keys unrelated to basic in or
     the evi ontology fixes minor formatting things
@@ -216,6 +219,9 @@ def clean_eg(eg,eg_only = True):
     for key in list(eg):
 
         if 'evi' not in key and 'eg' not in key and key != '@id' and key != 'author' and key != 'name' and key != '@type':
+            eg.pop(key, None)
+            continue
+        if 'evi:supports' == key:
             eg.pop(key, None)
             continue
 
@@ -252,7 +258,7 @@ def create_eg(ark):
 
     eg["@context"] = {
     "@vocab": "http://schema.org/",
-    "evi": "http://purl.org/evi/"
+    "evi": "http://w3id.org/EVI#"
     }
 
     return eg
