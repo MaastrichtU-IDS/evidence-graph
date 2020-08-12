@@ -218,7 +218,9 @@ def clean_eg(eg,eg_only = True,keep = []):
 
     for key in list(eg):
 
-        if 'evi' not in key and 'eg' not in key and key != '@id' and key != 'author' and key != 'name' and key != '@type':
+        if 'evi' not in key and 'eg' not in key and key != '@id' and \
+                        key != 'author' and key != 'name' and key != '@type' \
+                        and key not in keep:
             eg.pop(key, None)
             continue
         if 'evi:supports' == key:

@@ -2,6 +2,7 @@ import flask, stardog, logging
 import pandas as pd
 from flask import Flask, render_template, request, redirect,jsonify
 from utils import *
+from auth import *
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -15,11 +16,20 @@ def homepage():
     return 'working'
 
 @app.route('/<everything:ark>')
+@token_required
 def eg_builder(ark):
 
     logger.info('Homepage handling request %s', request)
 
     token = request.headers.get("Authorization")
+
+    args = request.args
+
+    include = []
+    for k, v in args.items():
+        if v == '1':
+            include.append(k)
+
 
     #Check to make sure request is for known ark
     try:
@@ -31,7 +41,7 @@ def eg_builder(ark):
 
     logger.info('Creating Evidence Graph for %s', ark)
     try:
-        eg = create_eg(ark)
+        eg = create_eg(ark,keep = include)
     except:
         logger.error('Failed to create eg for ark: %s',ark,
                         exc_info=True)
