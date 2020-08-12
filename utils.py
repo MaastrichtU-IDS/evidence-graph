@@ -2,7 +2,7 @@ import os, io, stardog,json
 import pandas as pd
 from werkzeug.routing import PathConverter
 import requests
-
+import time
 #session = requests.Session()
 #session.auth = (SD_USERNAME,SD_PASSWORD)
 
@@ -253,10 +253,16 @@ def create_eg(ark):
         3.) Clean up json
     '''
 
+    start = time.time()
     df_eg = query_stardog(ark)
+    print('Querying stardog took: ' + str(time.time() - start))
+    start = time.time()
     eg = parse_csv(df_eg)
+    print('Parsing took: ' + str(time.time() - start))
     #eg = build_evidence_graph(df_eg)
+    start = time.time()
     eg = clean_eg(eg)
+    print('Cleaning took: ' + str(time.time() - start))
 
     eg["@context"] = {
     "@vocab": "http://schema.org/",
