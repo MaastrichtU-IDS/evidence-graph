@@ -41,7 +41,7 @@ def eg_builder(ark):
 
     logger.info('Creating Evidence Graph for %s', ark)
     try:
-        eg = create_eg(ark,keep = include)
+        eg = create_eg_json(ark,keep = include)
     except:
         logger.error('Failed to create eg for ark: %s',ark,
                         exc_info=True)

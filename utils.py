@@ -63,12 +63,16 @@ def existing_eg(eg_id):
     return eg
 
 
-def query_stardog(ark):
+def query_stardog(ark,type = 'csv'):
     '''
     Performs the path query
     '''
 
-    results = conn.paths("PATHS ALL START ?x=<"+ ark + "> END ?y VIA ?p",content_type='text/csv')
+    if type == 'json':
+        results = conn.paths("PATHS ALL START ?x=<"+ ark + "> END ?y VIA ?p")
+        return results
+    else:
+        results = conn.paths("PATHS ALL START ?x=<"+ ark + "> END ?y VIA ?p",content_type='text/csv')
     string_csv = io.StringIO(results.decode("utf-8"))
 
     df_eg = pd.read_csv(string_csv, sep=",")
@@ -244,7 +248,7 @@ def clean_eg(eg,eg_only = True,keep = []):
 
     return eg
 
-def create_eg(ark):
+def create_eg(ark,keep = []):
     '''
     Runs all functions required to create an evidence graph
     ie
@@ -261,7 +265,100 @@ def create_eg(ark):
     print('Parsing took: ' + str(time.time() - start))
     #eg = build_evidence_graph(df_eg)
     start = time.time()
-    eg = clean_eg(eg)
+    eg = clean_eg(eg,keep = keep)
+    print('Cleaning took: ' + str(time.time() - start))
+
+    eg["@context"] = {
+    "@vocab": "http://schema.org/",
+    "evi": "http://w3id.org/EVI#"
+    }
+
+    return eg
+
+def parse_json(stardog_json):
+    '''
+    Parses the ugly csv returned from stardog
+    to build json evidence graph
+    '''
+
+    context = {'http://www.w3.org/1999/02/22-rdf-syntax-ns#':'@',
+               'http://schema.org/_id':'@id',
+              'http://schema.org/':'',
+               'http://example.org/':'eg:',
+               'http://example.org/':'evi:',
+               "https://wf4ever.github.io/ro/2016-01-28/wfdesc/":'wfdesc:'
+              }
+
+    eg = {}
+    current = eg
+    for bind in stardog_json['results']['bindings']:
+
+        #Nan row indicates next item restart at root node
+        if bind == {}:
+            current = eg
+            continue
+
+        #cleans tags
+        for key in context:
+            if key in bind['p']['value']:
+                bind['p']['value'] = bind['p']['value'].replace(key,context[key])
+            if key in bind['y']['value']:
+                bind['y']['value'] = bind['y']['value'].replace(key,context[key])
+
+        #If key not already in eg add it
+        #If its an id make it a dict not just an element
+        if bind['p']['value'] not in current.keys():
+            if is_id(bind['y']['value']):
+                if bind['p']['value'] == '@id':
+                    current['@id'] = bind['y']['value']
+                else:
+                    current[bind['p']['value']] = {'@id':bind['y']['value']}
+                    current = current[bind['p']['value']]
+            else:
+                current[bind['p']['value']] = bind['y']['value']
+
+        #If key already exists and its a new id its
+        #not single dict so make it list of dicts
+        elif isinstance(current[bind['p']['value']],dict):
+            if current[bind['p']['value']]['@id'] == bind['y']['value']:
+                current = current[bind['p']['value']]
+            else:
+                current[bind['p']['value']] = [current[bind['p']['value']],{'@id':bind['y']['value']}]
+                current = current[bind['p']['value']][-1]
+
+        #Look to see if we're moving into an element of the list
+        #ie this is adding on to a known id
+        #or if we're appending a new id to the list
+        elif isinstance(current[bind['p']['value']],list):
+            missing = True
+            for dictionary in current[bind['p']['value']]:
+                if dictionary['@id'] == bind['y']['value']:
+                    current = dictionary
+                    missing = False
+                    break
+            if missing:
+                current[bind['p']['value']].append({'@id':bind['y']['value']})
+                current = current[bind['p']['value']][-1]
+    return eg
+
+def create_eg_json(ark,keep = []):
+    '''
+    Runs all functions required to create an evidence graph
+    ie
+        1.) Path query
+        2.) Parse from csv -> json
+        3.) Clean up json
+    '''
+
+    start = time.time()
+    stardog_json = query_stardog(ark,type = 'json')
+    print('Querying stardog took: ' + str(time.time() - start))
+    start = time.time()
+    eg = parse_json(stardog_json)
+    print('Parsing took: ' + str(time.time() - start))
+    #eg = build_evidence_graph(df_eg)
+    start = time.time()
+    eg = clean_eg(eg,keep = keep)
     print('Cleaning took: ' + str(time.time() - start))
 
     eg["@context"] = {
